@@ -1,0 +1,4 @@
+[plugin]
+description = "Plugin for managing internal application redirects"
+version = "0.1.0"
+[plugin.config]

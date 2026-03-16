@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $DOKKU_TRACE ]] && set -x
+
+source "$PLUGIN_AVAILABLE_PATH/common/functions"
+
+cmd-redirect-path-list() {
+  declare desc="display the internal redirects set in the app"
+
+  local argv=("$@")
+  [[ ${argv[0]} == "redirect-path:list" ]] && shift 1
+
+  declare APP="$1"
+  [[ -z "$APP" ]] && echo "Please specify an app to run the command on" && exit 1
+  verify_app_name "$APP"
+
+  local APP_ROOT="$DOKKU_ROOT/$APP"
+  local REDIRECT_FILE="$APP_ROOT/REDIRECTS_INTERNAL"
+
+  [[ ! -s "$REDIRECT_FILE" ]] && dokku_log_warn "There are no internal redirects for $APP" && exit 0
+  (
+    echo "SOURCE DESTINATION CODE"
+    awk -F ' ' 'BEGIN { OFS=" " } { if ($3 == "") { $3 = "301" }; print }' "$DOKKU_ROOT/$APP/REDIRECTS_INTERNAL"
+  ) | column -s: -t
+}
+
+cmd-redirect-path-add() {
+  declare desc="add a new internal redirect to the app"
+
+  local argv=("$@")
+  [[ ${argv[0]} == "redirect-path:add" ]] && shift 1
+
+  declare APP="$1" SOURCE="$2" DEST="$3" CODE="${4:-301}"
+  [[ -z "$APP" ]] && echo "Please specify an app to run the command on" && exit 1
+  verify_app_name "$APP"
+
+  local APP_ROOT="$DOKKU_ROOT/$APP"
+  local REDIRECT_FILE="$APP_ROOT/REDIRECTS_INTERNAL"
+  [[ -z "$SOURCE" || -z "$DEST" ]] && echo "Please provide a source domain and a destination" && exit 1
+
+  touch "$REDIRECT_FILE"
+  grep -q "^$SOURCE " "$REDIRECT_FILE" && dokku_log_fail "Source domain is already redirected"
+  dokku_log_info1 "Setting redirect for $APP..."
+  echo "$SOURCE $DEST $CODE" >>"$REDIRECT_FILE"
+  dokku_log_verbose "Done"
+}
+
+cmd-redirect-path-delete() {
+  declare desc="delete an internal redirect from the app"
+
+  local argv=("$@")
+  [[ ${argv[0]} == "redirect-path:delete" ]] && shift 1
+
+  declare APP="$1" DOMAIN="$2"
+  [[ -z "$APP" ]] && echo "Please specify an app to run the command on" && exit 1
+  verify_app_name "$APP"
+
+  local APP_ROOT="$DOKKU_ROOT/$APP"
+  local REDIRECT_FILE="$APP_ROOT/REDIRECTS_INTERNAL"
+  [[ -z "$DOMAIN" ]] && echo "Please provide the source domain" && exit 1
+
+  touch "$REDIRECT_FILE"
+  sed -i "/^$DOMAIN .*/d" "$REDIRECT_FILE"
+  dokku_log_info1 "Unsetting redirect for $APP..."
+  dokku_log_verbose "Done"
+}
+
+cmd-redirect-path-apply() {
+  declare desc="apply the internal redirects to the app"
+
+  local argv=("$@")
+  [[ ${argv[0]} == "redirect-path:apply" ]] && shift 1
+
+  declare APP="$1"
+  [[ -z "$APP" ]] && echo "Please specify an app to run the command on" && exit 1
+  verify_app_name "$APP"
+
+  is_deployed "$APP" && plugn trigger proxy-build-config "$APP"
+  dokku_log_verbose "Done"
+}

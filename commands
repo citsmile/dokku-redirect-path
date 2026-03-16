@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $DOKKU_TRACE ]] && set -x
+
+case "$1" in
+  help | redirect-path:help)
+    echo -e 'Usage: dokku redirect-path[:command] [<app>]'
+    ;;
+  *)
+    exit $DOKKU_NOT_IMPLEMENTED_EXIT
+    ;;
+esac
