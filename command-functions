@@ -36,10 +36,10 @@ cmd-redirect-path-add() {
 
   local APP_ROOT="$DOKKU_ROOT/$APP"
   local REDIRECT_FILE="$APP_ROOT/REDIRECTS_INTERNAL"
-  [[ -z "$SOURCE" || -z "$DEST" ]] && echo "Please provide a source domain and a destination" && exit 1
+  [[ -z "$SOURCE" || -z "$DEST" ]] && echo "Please provide a source url and a destination" && exit 1
 
   touch "$REDIRECT_FILE"
-  grep -q "^$SOURCE " "$REDIRECT_FILE" && dokku_log_fail "Source domain is already redirected"
+  grep -q "^$SOURCE " "$REDIRECT_FILE" && dokku_log_fail "Source url is already redirected"
   dokku_log_info1 "Setting redirect for $APP..."
   echo "$SOURCE $DEST $CODE" >>"$REDIRECT_FILE"
   dokku_log_verbose "Done"
@@ -51,16 +51,17 @@ cmd-redirect-path-delete() {
   local argv=("$@")
   [[ ${argv[0]} == "redirect-path:delete" ]] && shift 1
 
-  declare APP="$1" DOMAIN="$2"
+  declare APP="$1" SOURCE="$2"
   [[ -z "$APP" ]] && echo "Please specify an app to run the command on" && exit 1
   verify_app_name "$APP"
 
   local APP_ROOT="$DOKKU_ROOT/$APP"
   local REDIRECT_FILE="$APP_ROOT/REDIRECTS_INTERNAL"
-  [[ -z "$DOMAIN" ]] && echo "Please provide the source domain" && exit 1
+  [[ -z "$SOURCE" ]] && echo "Please provide the source url" && exit 1
 
   touch "$REDIRECT_FILE"
-  sed -i "/^$DOMAIN .*/d" "$REDIRECT_FILE"
+  ESCAPED_SOURCE=$(printf '%s\n' "$SOURCE" | sed 's/[][\\.^$*#]/\\&/g')
+  sed -i "\#^$ESCAPED_SOURCE .*#d" "$REDIRECT_FILE"
   dokku_log_info1 "Unsetting redirect for $APP..."
   dokku_log_verbose "Done"
 }

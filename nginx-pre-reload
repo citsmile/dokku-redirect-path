@@ -32,7 +32,7 @@ redirect_nginx_pre_load_trigger() {
     dokku_log_info1 "Configuring redirect for $DOMAIN to $DEST_DOMAIN via HTTP $REDIR_CODE..."
 
     echo "location /$DOMAIN {
-  return $REDIR_CODE \$scheme://\$host/$DEST_DOMAIN;
+  return $REDIR_CODE /$DEST_DOMAIN;
 }" >>"$NGINX_CONF_PREPEND"
   done <<<"$(<"$REDIRECT_FILE")"
 
